@@ -22,6 +22,7 @@ import {
 } from '@mui/material';
 import ReplayIcon from '@mui/icons-material/Replay';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
+import InstallMobileIcon from '@mui/icons-material/InstallMobile';
 
 const theme = createTheme({
   palette: {
@@ -49,6 +50,9 @@ const BINGO_RANGES = {
 };
 
 function App() {
+  const [deferredPrompt, setDeferredPrompt] = useState(null);
+  const [isInstallable, setIsInstallable] = useState(false);
+
   // Initialize state from localStorage if available
   const [calledNumbers, setCalledNumbers] = useState(() => {
     const saved = localStorage.getItem('bingo_calledNumbers');
@@ -61,6 +65,29 @@ function App() {
   });
 
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
+
+  // PWA Install Logic
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      setIsInstallable(true);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
+  }, []);
+
+  const handleInstallClick = async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    setDeferredPrompt(null);
+    setIsInstallable(false);
+  };
 
   // Sync state to localStorage
   useEffect(() => {
@@ -125,7 +152,7 @@ function App() {
             </Typography>
           </Paper>
 
-          <Box sx={{ display: 'flex', gap: 2 }}>
+          <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', justifyContent: 'center' }}>
             <Button
               variant="contained"
               size="large"
@@ -145,6 +172,17 @@ function App() {
             >
               Reset
             </Button>
+            {isInstallable && (
+              <Button
+                variant="contained"
+                color="success"
+                startIcon={<InstallMobileIcon />}
+                onClick={handleInstallClick}
+                sx={{ px: 4, py: 1.5, fontSize: '1.2rem', bgcolor: '#2e7d32' }}
+              >
+                Install App
+              </Button>
+            )}
           </Box>
         </Box>
 

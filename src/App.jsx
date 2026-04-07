@@ -16,13 +16,14 @@ import {
   DialogContent,
   DialogContentText,
   DialogActions,
+  IconButton,
   CssBaseline,
   ThemeProvider,
   createTheme,
 } from '@mui/material';
 import ReplayIcon from '@mui/icons-material/Replay';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
-import InstallMobileIcon from '@mui/icons-material/InstallMobile';
+import CloseIcon from '@mui/icons-material/Close';
 
 const theme = createTheme({
   palette: {
@@ -50,9 +51,6 @@ const BINGO_RANGES = {
 };
 
 function App() {
-  const [deferredPrompt, setDeferredPrompt] = useState(null);
-  const [isInstallable, setIsInstallable] = useState(false);
-
   // Initialize state from localStorage if available
   const [calledNumbers, setCalledNumbers] = useState(() => {
     const saved = localStorage.getItem('bingo_calledNumbers');
@@ -65,29 +63,6 @@ function App() {
   });
 
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
-
-  // PWA Install Logic
-  useEffect(() => {
-    const handleBeforeInstallPrompt = (e) => {
-      e.preventDefault();
-      setDeferredPrompt(e);
-      setIsInstallable(true);
-    };
-
-    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-
-    return () => {
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-    };
-  }, []);
-
-  const handleInstallClick = async () => {
-    if (!deferredPrompt) return;
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-    setDeferredPrompt(null);
-    setIsInstallable(false);
-  };
 
   // Sync state to localStorage
   useEffect(() => {
@@ -143,8 +118,8 @@ function App() {
         </Typography>
 
         <Box sx={{ mb: 4, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-          <Paper elevation={3} sx={{ p: 4, minWidth: 200, textAlign: 'center', bgcolor: 'primary.dark', color: 'primary.contrastText' }}>
-            <Typography variant="h6" gutterBottom sx={{ opacity: 0.9 }}>
+          <Paper elevation={3} role="status" sx={{ p: 4, minWidth: 200, textAlign: 'center', bgcolor: 'primary.dark', color: 'primary.contrastText' }}>
+            <Typography variant="subtitle1" component="div" gutterBottom sx={{ opacity: 0.9, fontWeight: 'medium' }}>
               CURRENT NUMBER
             </Typography>
             <Typography variant="h2" component="div" sx={{ fontWeight: 'bold' }}>
@@ -172,17 +147,6 @@ function App() {
             >
               Reset
             </Button>
-            {isInstallable && (
-              <Button
-                variant="contained"
-                color="success"
-                startIcon={<InstallMobileIcon />}
-                onClick={handleInstallClick}
-                sx={{ px: 4, py: 1.5, fontSize: '1.2rem', bgcolor: '#2e7d32' }}
-              >
-                Install App
-              </Button>
-            )}
           </Box>
         </Box>
 
@@ -230,6 +194,11 @@ function App() {
                         }}
                       >
                         {number}
+                        {isCalled && (
+                          <span className="sr-only">
+                            previously called
+                          </span>
+                        )}
                       </TableCell>
                     );
                   })}
@@ -248,8 +217,24 @@ function App() {
         <Dialog
           open={resetDialogOpen}
           onClose={() => setResetDialogOpen(false)}
+          aria-labelledby="reset-dialog-title"
         >
-          <DialogTitle>Reset Game?</DialogTitle>
+          <DialogTitle id="reset-dialog-title" sx={{ m: 0, p: 2 }}>
+            Reset Game?
+          </DialogTitle>
+          <IconButton
+            aria-label="close"
+            onClick={() => setResetDialogOpen(false)}
+            autoFocus
+            sx={{
+              position: 'absolute',
+              right: 8,
+              top: 8,
+              color: (theme) => theme.palette.grey[500],
+            }}
+          >
+            <CloseIcon />
+          </IconButton>
           <DialogContent>
             <DialogContentText>
               Are you sure you want to reset the game? This will clear all called numbers and you cannot undo this action.
@@ -257,7 +242,7 @@ function App() {
           </DialogContent>
           <DialogActions>
             <Button onClick={() => setResetDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleReset} color="secondary" autoFocus>
+            <Button onClick={handleReset} color="secondary">
               Reset Game
             </Button>
           </DialogActions>
